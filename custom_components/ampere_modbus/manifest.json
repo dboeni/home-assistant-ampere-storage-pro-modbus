@@ -1,0 +1,16 @@
+{
+  "domain": "ampere_storage_pro_modbus",
+  "name": "AmpereStorage.Pro",
+  "codeowners": [
+    "@dboeni"
+  ],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/dboeni/home-assistant-ampere-storage-pro-modbus",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/dboeni/home-assistant-ampere-storage-pro-modbus/issues",
+  "requirements": [
+    "pymodbus>=3.5.1"
+  ],
+  "version": "0.1.0"
+}

@@ -1,0 +1,22 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "AmpereStorage.Pro Einrichtung",
+        "data": {
+          "host": "IP Adresse",
+          "name": "Name",
+          "port": "Modbus TCP Port",
+          "unit": "Unit",
+          "scan_interval": "Abfrage der Sensoren in Sekunden"
+        }
+      }
+    },
+    "error": {
+      "already_configured": "Gerät ist bereits konfiguriert"
+    },
+    "abort": {
+      "already_configured": "Gerät ist bereits konfiguriert"
+    }
+  }
+}
