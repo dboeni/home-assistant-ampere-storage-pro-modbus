@@ -210,39 +210,6 @@ class AmpereStorageProModbusHub(DataUpdateCoordinator[dict]):
 
         return data
 
-    def read_modbus_pv_data(self) -> dict:
-
-        realtime_data = self._read_input_registers(
-            unit=self.unit, address=0x205, count=6
-        )
-
-        if realtime_data.isError():
-            return {}
-
-        data = {}
-
-        decoder = BinaryPayloadDecoder.fromRegisters(
-            realtime_data.registers, byteorder=Endian.BIG
-        )
-
-        pv1volt = decoder.decode_16bit_uint()
-        pv1curr = decoder.decode_16bit_uint()
-        pv1power = decoder.decode_16bit_uint()
-        data["pv1volt"] = round(pv1volt * 0.1, 1)
-        data["pv1curr"] = round(pv1curr * 0.01, 2)
-        data["pv1power"] = round(pv1power * 1, 0)
-
-        pv2volt = decoder.decode_16bit_uint()
-        pv2curr = decoder.decode_16bit_uint()
-        pv2power = decoder.decode_16bit_uint()
-        data["pv2volt"] = round(pv2volt * 0.1, 1)
-        data["pv2curr"] = round(pv2curr * 0.01, 2)
-        data["pv2power"] = round(pv2power * 1, 0)
-
-        data["totalpvpower"] = round(pv1power * 1, 0) + round(pv2power * 1, 0)
-
-        return data
-
     def read_modbus_longterm_data(self) -> dict:
 
         realtime_data = self._read_input_registers(
