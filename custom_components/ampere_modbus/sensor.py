@@ -355,42 +355,6 @@ SENSOR_TYPES: dict[str, list[AmpereModbusSensorEntityDescription]] = {
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
     ),
-    "BMS1Type": AmpereModbusSensorEntityDescription(
-        name="BMS1 Type",
-        key="bms1type",
-        icon="mdi:information-outline",
-        entity_registry_enabled_default=True,
-    ),
-    "BMS1SerialNumber": AmpereModbusSensorEntityDescription(
-        name="BMS1 Serial Number",
-        key="bms1serialnumber",
-        icon="mdi:information-outline",
-        entity_registry_enabled_default=True,
-    ),
-    "BMS1SoftwareVersion": AmpereModbusSensorEntityDescription(
-        name="BMS1 Software Version",
-        key="bms1softwareversion",
-        icon="mdi:information-outline",
-        entity_registry_enabled_default=True,
-    ),
-    "BMS1HardwareVersion": AmpereModbusSensorEntityDescription(
-        name="BMS1 Hardware Version",
-        key="bms1hardwareversion",
-        icon="mdi:information-outline",
-        entity_registry_enabled_default=True,
-    ),
-    "Battery1Type": AmpereModbusSensorEntityDescription(
-        name="Battery1 Type",
-        key="battery1type",
-        icon="mdi:information-outline",
-        entity_registry_enabled_default=True,
-    ),
-    "Battery1SerialNumber": AmpereModbusSensorEntityDescription(
-        name="Battery1 Serial Number",
-        key="battery1serialnumber",
-        icon="mdi:information-outline",
-        entity_registry_enabled_default=True,
-    ),
     "PvFlowText": AmpereModbusSensorEntityDescription(
         name="PV Flow Text",
         key="pvflowtext",
