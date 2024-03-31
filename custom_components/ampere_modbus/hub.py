@@ -212,17 +212,17 @@ class AmpereStorageProModbusHub(DataUpdateCoordinator[dict]):
 
     def read_modbus_longterm_data(self) -> dict:
 
-        realtime_data = self._read_input_registers(
+        longterm_data = self._read_input_registers(
             unit=self.unit, address=0x40BF, count=24
         )
 
-        if realtime_data.isError():
+        if longterm_data.isError():
             return {}
 
         data = {}
 
         decoder = BinaryPayloadDecoder.fromRegisters(
-            realtime_data.registers, byteorder=Endian.BIG
+            longterm_data.registers, byteorder=Endian.BIG
         )
 
         dailypvgeneration = decoder.decode_32bit_uint()
