@@ -17,7 +17,7 @@ from .const import (
 
 DATA_SCHEMA = vol.Schema(
     {
-        vol.Optional(CONF_NAME, default=DEFAULT_NAME): str,
+        vol.Required(CONF_NAME, default=DEFAULT_NAME): str,
         vol.Required(CONF_HOST): str,
         vol.Required(CONF_PORT, default=DEFAULT_PORT): int,
         vol.Optional(CONF_UNIT, default=DEFAULT_UNIT): int,
