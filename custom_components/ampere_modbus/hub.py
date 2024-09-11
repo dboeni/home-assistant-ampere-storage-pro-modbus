@@ -3,7 +3,7 @@
 from pymodbus.register_read_message import ReadInputRegistersResponse
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from voluptuous.validators import Number
-from homeassistant.helpers.typing import HomeAssistantType
+from homeassistant.core import HomeAssistant
 import logging
 import threading
 from datetime import timedelta
@@ -27,7 +27,7 @@ class AmpereStorageProModbusHub(DataUpdateCoordinator[dict]):
 
     def __init__(
         self,
-        hass: HomeAssistantType,
+        hass: HomeAssistant,
         name: str,
         host: str,
         port: Number,
