@@ -7,7 +7,7 @@
   "config_flow": true,
   "dependencies": [],
   "documentation": "https://github.com/dboeni/home-assistant-ampere-storage-pro-modbus",
-  "integration_type": "hub",
+  "integration_type": "device",
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/dboeni/home-assistant-ampere-storage-pro-modbus/issues",
   "requirements": [
