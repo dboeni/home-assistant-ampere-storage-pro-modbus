@@ -36,25 +36,11 @@ def host_valid(host):
         return all(x and not disallowed.search(x) for x in host.split("."))
 
 
-@callback
-def Ampere_modbus_entries(hass: HomeAssistant):
-    """Return the hosts already configured."""
-    return set(
-        entry.data[CONF_HOST] for entry in hass.config_entries.async_entries(DOMAIN)
-    )
-
-
 class AmpereModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Ampere Storage Pro Modbus configflow."""
 
     VERSION = 1
     CONNECTION_CLASS = config_entries.CONN_CLASS_LOCAL_POLL
-
-    def _host_in_configuration_exists(self, host) -> bool:
-        """Return True if host exists in configuration."""
-        if host in Ampere_modbus_entries(self.hass):
-            return True
-        return False
 
     async def async_step_user(self, user_input=None):
         """Handle the initial step."""
@@ -63,12 +49,10 @@ class AmpereModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             host = user_input[CONF_HOST]
 
-            if self._host_in_configuration_exists(host):
-                errors[CONF_HOST] = "already_configured"
-            elif not host_valid(user_input[CONF_HOST]):
+            if not host_valid(user_input[CONF_HOST]):
                 errors[CONF_HOST] = "invalid host IP"
             else:
-                await self.async_set_unique_id(user_input[CONF_HOST])
+                await self.async_set_unique_id(user_input[CONF_NAME])
                 self._abort_if_unique_id_configured()
                 return self.async_create_entry(
                     title=user_input[CONF_NAME], data=user_input
