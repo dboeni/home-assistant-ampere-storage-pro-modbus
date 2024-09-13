@@ -47,8 +47,6 @@ class AmpereModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors = {}
 
         if user_input is not None:
-            host = user_input[CONF_HOST]
-
             if not host_valid(user_input[CONF_HOST]):
                 errors[CONF_HOST] = "invalid host IP"
             else:
