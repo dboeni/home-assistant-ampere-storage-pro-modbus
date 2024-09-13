@@ -1,5 +1,5 @@
 {
-  "domain": "ampere_storage_pro_modbus",
+  "domain": "ampere_modbus",
   "name": "Ampere.StoragePro",
   "codeowners": [
     "@dboeni"
