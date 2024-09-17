@@ -1,4 +1,4 @@
-DOMAIN = "ampere_storage_pro_modbus"
+DOMAIN = "ampere_modbus"
 ATTR_MANUFACTURER = "Ampere"
 
 CONF_UNIT = "unit"
