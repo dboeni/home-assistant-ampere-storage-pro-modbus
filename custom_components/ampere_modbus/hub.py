@@ -97,7 +97,6 @@ class AmpereStorageProModbusHub(DataUpdateCoordinator[dict]):
         }
 
     def read_modbus_inverter_data(self) -> dict:
-        _LOGGER.error("Reading inverter data")
         inverter_data = self._read_input_registers(
             unit=self.unit, address=0x8F00, count=29
         )
