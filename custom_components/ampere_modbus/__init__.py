@@ -61,25 +61,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Register the hub."""
     hass.data[DOMAIN][name] = {"hub": hub}
 
-    for component in PLATFORMS:
-        hass.async_create_task(
-            hass.config_entries.async_forward_entry_setup(entry, component)
-        )
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+
     return True
 
 
 async def async_unload_entry(hass, entry):
     """Unload Ampere Storage Pro mobus entry."""
-    unload_ok = all(
-        await asyncio.gather(
-            *[
-                hass.config_entries.async_forward_entry_unload(entry, component)
-                for component in PLATFORMS
-            ]
-        )
-    )
-    if not unload_ok:
-        return False
-
-    hass.data[DOMAIN].pop(entry.data["name"])
-    return True
+    if unloaded := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
+        hass.data[DOMAIN].pop(entry.data["name"])
+    return unloaded
