@@ -1,6 +1,8 @@
 """Ampere Modbus Hub"""
 
-from pymodbus.register_read_message import ReadInputRegistersResponse
+from pymodbus.register_read_message import (
+    ReadHoldingRegistersResponse,
+)
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from voluptuous.validators import Number
 from homeassistant.core import HomeAssistant
@@ -63,10 +65,12 @@ class AmpereStorageProModbusHub(DataUpdateCoordinator[dict]):
         with self._lock:
             self._client.close()
 
-    def _read_input_registers(self, unit, address, count) -> ReadInputRegistersResponse:
+    def _read_holding_registers(
+        self, unit, address, count
+    ) -> ReadHoldingRegistersResponse:
         """Read input registers."""
         with self._lock:
-            return self._client.read_input_registers(
+            return self._client.read_holding_registers(
                 address=address, count=count, slave=unit
             )
 
@@ -97,7 +101,7 @@ class AmpereStorageProModbusHub(DataUpdateCoordinator[dict]):
         }
 
     def read_modbus_inverter_data(self) -> dict:
-        inverter_data = self._read_input_registers(
+        inverter_data = self._read_holding_registers(
             unit=self.unit, address=0x8F00, count=29
         )
 
@@ -138,8 +142,8 @@ class AmpereStorageProModbusHub(DataUpdateCoordinator[dict]):
 
     def read_modbus_realtime_data(self) -> dict:
 
-        realtime_data = self._read_input_registers(
             unit=self.unit, address=0x4069, count=48
+        realtime_data = self._read_holding_registers(
         )
 
         if realtime_data.isError():
@@ -211,8 +215,8 @@ class AmpereStorageProModbusHub(DataUpdateCoordinator[dict]):
 
     def read_modbus_longterm_data(self) -> dict:
 
-        longterm_data = self._read_input_registers(
             unit=self.unit, address=0x40BF, count=24
+        longterm_data = self._read_holding_registers(
         )
 
         if longterm_data.isError():
