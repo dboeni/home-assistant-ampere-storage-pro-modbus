@@ -142,8 +142,8 @@ class AmpereStorageProModbusHub(DataUpdateCoordinator[dict]):
 
     def read_modbus_realtime_data(self) -> dict:
 
-            unit=self.unit, address=0x4069, count=48
         realtime_data = self._read_holding_registers(
+            unit=self.unit, address=0x4069, count=60
         )
 
         if realtime_data.isError():
@@ -186,7 +186,16 @@ class AmpereStorageProModbusHub(DataUpdateCoordinator[dict]):
 
         decoder.skip_bytes(12)  # pv3 & pv4
         decoder.skip_bytes(32)  # unkown, always = 0
-        decoder.skip_bytes(16)  # net side (V A Hz W 4xr)
+
+        # net side
+        decoder.skip_bytes(2)  # V Volt (R)
+        decoder.skip_bytes(2)  # A Current (R)
+        decoder.skip_bytes(2)  # Hz Frequenz (R)
+        decoder.skip_bytes(2)  # W Power L1 (R)
+        decoder.skip_bytes(2)  # A Current L2 (S)
+        decoder.skip_bytes(2)  # W Power L2 (S)
+        decoder.skip_bytes(2)  # A Current L3 (T)
+        decoder.skip_bytes(2)  # W Power L3 (T)
 
         pvflow = decoder.decode_16bit_uint()
         data["pvflow"] = pvflow
@@ -209,14 +218,25 @@ class AmpereStorageProModbusHub(DataUpdateCoordinator[dict]):
         else:
             data["gridflowtext"] = "Unknown"
 
-        decoder.skip_bytes(1)  # flow load
+        decoder.skip_bytes(2)  # flow load
+
+        decoder.skip_bytes(14)  # res
+
+        # Internal CT acquisition
+        decoder.skip_bytes(2)  # W The total system load consumes power
+        # W CT real power of the grid
+        gridpower = decoder.decode_16bit_int()
+        data["gridpower"] = gridpower
+        decoder.skip_bytes(2)  # VA CT Apparent power of the grid
+        decoder.skip_bytes(2)  # W CT PV real power
+        decoder.skip_bytes(2)  # VA CT PV Apparent power
 
         return data
 
     def read_modbus_longterm_data(self) -> dict:
 
-            unit=self.unit, address=0x40BF, count=24
         longterm_data = self._read_holding_registers(
+            unit=self.unit, address=0x40BF, count=88
         )
 
         if longterm_data.isError():

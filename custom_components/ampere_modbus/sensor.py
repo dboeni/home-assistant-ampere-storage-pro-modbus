@@ -271,6 +271,13 @@ SENSOR_TYPES: dict[str, list[AmpereModbusSensorEntityDescription]] = {
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
     ),
+    "GridPower": AmpereModbusSensorEntityDescription(
+        name="Grid Power",
+        key="gridpower",
+        native_unit_of_measurement=UnitOfPower.WATT,
+        device_class=SensorDeviceClass.POWER,
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
     "DailyPvGeneration": AmpereModbusSensorEntityDescription(
         name="Daily PV Generation",
         key="dailypvgeneration",
