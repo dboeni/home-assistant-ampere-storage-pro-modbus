@@ -1,8 +1,5 @@
 """Ampere Modbus Hub"""
 
-from pymodbus.register_read_message import (
-    ReadHoldingRegistersResponse,
-)
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from voluptuous.validators import Number
 from homeassistant.core import HomeAssistant
@@ -67,7 +64,7 @@ class AmpereStorageProModbusHub(DataUpdateCoordinator[dict]):
 
     def _read_holding_registers(
         self, unit, address, count
-    ) -> ReadHoldingRegistersResponse:
+    ):
         """Read input registers."""
         with self._lock:
             return self._client.read_holding_registers(
