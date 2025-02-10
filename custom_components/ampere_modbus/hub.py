@@ -15,9 +15,11 @@ from pymodbus.payload import BinaryPayloadDecoder
 from pymodbus.exceptions import ConnectionException, ModbusIOException
 
 from .const import (
+    DEVICE_STATUSSES,
     PV_DIRECTION,
     BATTERY_DIRECTION,
     GRID_DIRECTION,
+    FAULT_MESSAGES
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -161,6 +163,7 @@ class AmpereStorageProModbusHub(DataUpdateCoordinator[dict]):
             self._inverter_data.update(await self.read_modbus_inverter_data())
         all_read_data = {**self._inverter_data}
 
+        all_read_data.update(await self.read_modbus_device_data())
         all_read_data.update(await self.read_modbus_realtime_data())
         all_read_data.update(await self.read_modbus_longterm_data())
 
@@ -198,6 +201,33 @@ class AmpereStorageProModbusHub(DataUpdateCoordinator[dict]):
             data["ctrlhwversion"] = round(ctrlhwversion * 0.001, 3)
             powerhwversion = decoder.decode_16bit_uint()
             data["powerhwversion"] = round(powerhwversion * 0.001, 3)
+
+            return data
+        except Exception as e:
+            _LOGGER.error(f"Error reading inverter data: {e}")
+            return {}
+
+    async def read_modbus_device_data(self) -> dict:
+        try:
+            regs = await self.read_holding_registers(self._unit, 0x4004, 7)
+            decoder = BinaryPayloadDecoder.fromRegisters(
+                regs, byteorder=Endian.BIG)
+            data = {}
+
+            mpv = decoder.decode_16bit_uint()
+            data["devicestatus"] = DEVICE_STATUSSES.get(mpv, "Unknown")
+
+            fault1 = decoder.decode_32bit_uint()
+            fault2 = decoder.decode_32bit_uint()
+            fault3 = decoder.decode_32bit_uint()
+            error_messages = []
+            error_messages.extend(msg for code, msg in FAULT_MESSAGES[0].items()
+                                  if fault1 & code)
+            error_messages.extend(msg for code, msg in FAULT_MESSAGES[1].items()
+                                  if fault2 & code)
+            error_messages.extend(msg for code, msg in FAULT_MESSAGES[2].items()
+                                  if fault3 & code)
+            data["deviceerror"] = ", ".join(error_messages).strip()[:254]
 
             return data
         except Exception as e:

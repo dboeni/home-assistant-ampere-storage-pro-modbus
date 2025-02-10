@@ -408,4 +408,18 @@ SENSOR_TYPES: dict[str, list[AmpereModbusSensorEntityDescription]] = {
         icon="mdi:information-outline",
         entity_registry_enabled_default=True,
     ),
+    "DeviceStatus": AmpereModbusSensorEntityDescription(
+        name="Device Status",
+        key="devicestatus",
+        icon="mdi:information-outline",
+        entity_registry_enabled_default=True,
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+    "DeviceError": AmpereModbusSensorEntityDescription(
+        name="Device Error",
+        key="deviceerror",
+        icon="mdi:information-outline",
+        entity_registry_enabled_default=True,
+        entity_category=EntityCategory.DIAGNOSTIC,
+    ),
 }
