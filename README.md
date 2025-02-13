@@ -11,6 +11,7 @@ Home Assistant custom component for reading data locally from Ampere.StoragePro 
 
 ## Features in future
 
+- Installation directly from the hacs store
 - Make settings changeable
 - Batterie steuerbar (Last vom Netz)
 
