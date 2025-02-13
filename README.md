@@ -3,6 +3,17 @@
 # A Home Assistant custom component for Ampere.StoragePro inverters
 Home Assistant custom component for reading data locally from Ampere.StoragePro inverter through modbus TCP 
 
+## Features
+
+- Setup via the UI
+- Configurable slave id and polling interval
+- Registers are read in blocks (reduction of queries)
+
+## Features in future
+
+- Make settings changeable
+- Batterie steuerbar (Last vom Netz)
+
 # Installation
 
 This custom component can be installed in two different ways: `manually` or `using HACS`
