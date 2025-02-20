@@ -10,8 +10,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from voluptuous.validators import Number
 import threading
 from pymodbus.client import AsyncModbusTcpClient
-from pymodbus.constants import Endian
-from pymodbus.payload import BinaryPayloadDecoder
+from pymodbus.client.mixin import ModbusClientMixin
 from pymodbus.exceptions import ConnectionException, ModbusIOException
 
 from .const import (
@@ -19,7 +18,7 @@ from .const import (
     PV_DIRECTION,
     BATTERY_DIRECTION,
     GRID_DIRECTION,
-    FAULT_MESSAGES
+    FAULT_MESSAGES,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -56,12 +55,14 @@ class AmpereStorageProModbusHub(DataUpdateCoordinator[dict]):
 
     def _create_client(self) -> AsyncModbusTcpClient:
         """Create a new client instance."""
-        client = AsyncModbusTcpClient(host=self._host,
-                                      port=self._port,
-                                      timeout=10,
-                                      )
+        client = AsyncModbusTcpClient(
+            host=self._host,
+            port=self._port,
+            timeout=10,
+        )
         _LOGGER.debug(
-            f"Created new Modbus client: AsyncModbusTcpClient {self._host}:{self._port}")
+            f"Created new Modbus client: AsyncModbusTcpClient {self._host}:{self._port}"
+        )
         return client
 
     async def _safe_close(self) -> bool:
@@ -111,10 +112,8 @@ class AmpereStorageProModbusHub(DataUpdateCoordinator[dict]):
             await asyncio.wait_for(self._client.connect(), timeout=10)
             _LOGGER.info("Successfully connected to Modbus server.")
         except Exception as e:
-            _LOGGER.warning(
-                f"Error during connection attempt: {e}", exc_info=True)
-            raise ConnectionException(
-                "Failed to connect to Modbus server.") from e
+            _LOGGER.warning(f"Error during connection attempt: {e}", exc_info=True)
+            raise ConnectionException("Failed to connect to Modbus server.") from e
 
     async def read_holding_registers(
         self,
@@ -122,7 +121,7 @@ class AmpereStorageProModbusHub(DataUpdateCoordinator[dict]):
         address: int,
         count: int,
         max_retries: int = 3,
-        base_delay: float = 2.0
+        base_delay: float = 2.0,
     ) -> List[int]:
         """Reads Modbus registers with error handling."""
         for attempt in range(max_retries):
@@ -132,21 +131,24 @@ class AmpereStorageProModbusHub(DataUpdateCoordinator[dict]):
                         address=address, count=count, slave=unit
                     )
 
-                if (not response) or response.isError() or len(response.registers) != count:
-                    raise ModbusIOException(
-                        f"Invalid response from address {address}")
+                if (
+                    (not response)
+                    or response.isError()
+                    or len(response.registers) != count
+                ):
+                    raise ModbusIOException(f"Invalid response from address {address}")
 
                 return response.registers
 
             except (ModbusIOException, ConnectionException) as e:
                 _LOGGER.error(
-                    f"Read attempt {attempt + 1} failed at address {address}: {e}")
+                    f"Read attempt {attempt + 1} failed at address {address}: {e}"
+                )
                 if attempt <= max_retries:
-                    delay = min(base_delay * (2 ** attempt), 10.0)
+                    delay = min(base_delay * (2**attempt), 10.0)
                     await asyncio.sleep(delay)
                     if not await self._safe_close():
-                        _LOGGER.warning(
-                            "Failed to safely close the Modbus client.")
+                        _LOGGER.warning("Failed to safely close the Modbus client.")
                     try:
                         await self.ensure_modbus_connection()
                     except ConnectionException:
@@ -155,9 +157,11 @@ class AmpereStorageProModbusHub(DataUpdateCoordinator[dict]):
                     else:
                         _LOGGER.info("Reconnected Modbus client successfully.")
         _LOGGER.error(
-            f"Failed to read registers from unit {unit}, address {address} after {max_retries} attempts")
+            f"Failed to read registers from unit {unit}, address {address} after {max_retries} attempts"
+        )
         raise ConnectionException(
-            f"Read operation failed for address {address} after {max_retries} attempts")
+            f"Read operation failed for address {address} after {max_retries} attempts"
+        )
 
     async def _async_update_data(self) -> dict:
         await self.ensure_modbus_connection()
@@ -172,37 +176,104 @@ class AmpereStorageProModbusHub(DataUpdateCoordinator[dict]):
         await self.close()
         return all_read_data
 
+    def decode_16bit_uint(self, register: List[int], position: int) -> tuple[any, int]:
+        try:
+            value = self._client.convert_from_registers(
+                [register[position]], ModbusClientMixin.DATATYPE.UINT16
+            )
+        except Exception as e:
+            _LOGGER.error(f"Error decode_16bit_uint: {e}")
+
+        position += 1
+        return value, position
+
+    def decode_16bit_int(self, register: List[int], position: int) -> tuple[any, int]:
+        try:
+            value = self._client.convert_from_registers(
+                [register[position]], ModbusClientMixin.DATATYPE.INT16
+            )
+        except Exception as e:
+            _LOGGER.error(f"Error decode_16bit_int: {e}")
+
+        position += 1
+        return value, position
+
+    def decode_32bit_uint(self, register: List[int], position: int) -> tuple[any, int]:
+        try:
+            value = self._client.convert_from_registers(
+                [register[position], register[position + 1]],
+                ModbusClientMixin.DATATYPE.UINT32,
+            )
+        except Exception as e:
+            _LOGGER.error(f"Error decode_32bit_uint: {e}")
+
+        position += 2
+        return value, position
+
+    def decode_32bit_int(self, register: List[int], position: int) -> tuple[any, int]:
+        try:
+            value = self._client.convert_from_registers(
+                [register[position], register[position + 1]],
+                ModbusClientMixin.DATATYPE.INT32,
+            )
+        except Exception as e:
+            _LOGGER.error(f"Error decode_32bit_int: {e}")
+
+        position += 2
+        return value, position
+
+    def decode_string(
+        self, length: int, register: List[int], position: int
+    ) -> tuple[str, int]:
+
+        registerOfString: List[int] = []
+        for i in range(length):
+            registerOfString.append(register[position + i])
+
+        try:
+            value = self._client.convert_from_registers(
+                registerOfString, ModbusClientMixin.DATATYPE.STRING
+            )
+        except Exception as e:
+            _LOGGER.error(f"Error decode_string: {e}")
+            value = ""
+
+        position += length
+        return str(value), position
+
     async def read_modbus_inverter_data(self) -> dict:
         try:
-            regs = await self.read_holding_registers(self._unit, 0x8F00, 29)
-            decoder = BinaryPayloadDecoder.fromRegisters(
-                regs, byteorder=Endian.BIG)
+            registerList = await self.read_holding_registers(self._unit, 0x8F00, 29)
+            position: int = 0
             data = {}
 
-            devicetype = decoder.decode_16bit_uint()
-            data["devicetype"] = devicetype
-            subtype = decoder.decode_16bit_uint()
-            data["subtype"] = subtype
-            commver = decoder.decode_16bit_uint()
-            data["commver"] = round(commver * 0.001, 3)
+            value, position = self.decode_16bit_uint(registerList, position)
+            data["devicetype"] = value
 
-            serialnumber = decoder.decode_string(20).decode("ascii")
-            data["serialnumber"] = str(serialnumber)
-            productcode = decoder.decode_string(20).decode("ascii")
-            data["productcode"] = str(productcode)
+            value, position = self.decode_16bit_uint(registerList, position)
+            data["subtype"] = value
 
-            dv = decoder.decode_16bit_uint()
-            data["dv"] = round(dv * 0.001, 3)
-            mcv = decoder.decode_16bit_uint()
-            data["mcv"] = round(mcv * 0.001, 3)
-            scv = decoder.decode_16bit_uint()
-            data["scv"] = round(scv * 0.001, 3)
-            disphwversion = decoder.decode_16bit_uint()
-            data["disphwversion"] = round(disphwversion * 0.001, 3)
-            ctrlhwversion = decoder.decode_16bit_uint()
-            data["ctrlhwversion"] = round(ctrlhwversion * 0.001, 3)
-            powerhwversion = decoder.decode_16bit_uint()
-            data["powerhwversion"] = round(powerhwversion * 0.001, 3)
+            value, position = self.decode_16bit_uint(registerList, position)
+            data["commver"] = round(value * 0.001, 3)
+
+            value, position = self.decode_string(10, registerList, position)
+            data["serialnumber"] = str(value)
+
+            value, position = self.decode_string(10, registerList, position)
+            data["productcode"] = str(value)
+
+            value, position = self.decode_16bit_uint(registerList, position)
+            data["dv"] = round(value * 0.001, 3)
+            value, position = self.decode_16bit_uint(registerList, position)
+            data["mcv"] = round(value * 0.001, 3)
+            value, position = self.decode_16bit_uint(registerList, position)
+            data["scv"] = round(value * 0.001, 3)
+            value, position = self.decode_16bit_uint(registerList, position)
+            data["disphwversion"] = round(value * 0.001, 3)
+            value, position = self.decode_16bit_uint(registerList, position)
+            data["ctrlhwversion"] = round(value * 0.001, 3)
+            value, position = self.decode_16bit_uint(registerList, position)
+            data["powerhwversion"] = round(value * 0.001, 3)
 
             return data
         except Exception as e:
@@ -211,24 +282,26 @@ class AmpereStorageProModbusHub(DataUpdateCoordinator[dict]):
 
     async def read_modbus_device_data(self) -> dict:
         try:
-            regs = await self.read_holding_registers(self._unit, 0x4004, 7)
-            decoder = BinaryPayloadDecoder.fromRegisters(
-                regs, byteorder=Endian.BIG)
+            registerList = await self.read_holding_registers(self._unit, 0x4004, 7)
+            position: int = 0
             data = {}
 
-            mpv = decoder.decode_16bit_uint()
-            data["devicestatus"] = DEVICE_STATUSSES.get(mpv, "Unknown")
+            value, position = self.decode_16bit_uint(registerList, position)
+            data["devicestatus"] = DEVICE_STATUSSES.get(value, "Unknown")
 
-            fault1 = decoder.decode_32bit_uint()
-            fault2 = decoder.decode_32bit_uint()
-            fault3 = decoder.decode_32bit_uint()
+            fault1, position = self.decode_32bit_uint(registerList, position)
+            fault2, position = self.decode_32bit_uint(registerList, position)
+            fault3, position = self.decode_32bit_uint(registerList, position)
             error_messages = []
-            error_messages.extend(msg for code, msg in FAULT_MESSAGES[0].items()
-                                  if fault1 & code)
-            error_messages.extend(msg for code, msg in FAULT_MESSAGES[1].items()
-                                  if fault2 & code)
-            error_messages.extend(msg for code, msg in FAULT_MESSAGES[2].items()
-                                  if fault3 & code)
+            error_messages.extend(
+                msg for code, msg in FAULT_MESSAGES[0].items() if fault1 & code
+            )
+            error_messages.extend(
+                msg for code, msg in FAULT_MESSAGES[1].items() if fault2 & code
+            )
+            error_messages.extend(
+                msg for code, msg in FAULT_MESSAGES[2].items() if fault3 & code
+            )
             data["deviceerror"] = ", ".join(error_messages).strip()[:254]
 
             return data
@@ -238,88 +311,94 @@ class AmpereStorageProModbusHub(DataUpdateCoordinator[dict]):
 
     async def read_modbus_realtime_data(self) -> dict:
         try:
-            regs = await self.read_holding_registers(self._unit, 0x4069, 60)
-            decoder = BinaryPayloadDecoder.fromRegisters(
-                regs, byteorder=Endian.BIG)
+            registerList = await self.read_holding_registers(self._unit, 0x4069, 60)
+            position: int = 0
             data = {}
 
-            batteryvoltage = decoder.decode_16bit_uint()
-            batterycurrent = decoder.decode_16bit_int()
-            decoder.skip_bytes(4)
-            batterypower = decoder.decode_16bit_int()
-            batterytemperature = decoder.decode_16bit_int()
-            batterypercent = decoder.decode_16bit_uint()
-            data["batteryvoltage"] = round(batteryvoltage * 0.1, 1)
-            data["batterycurrent"] = round(batterycurrent * 0.01, 2)
-            data["batterypower"] = round(batterypower * 1, 0)
-            data["batterytemperature"] = round(batterytemperature * 0.1, 0)
-            data["batterypercent"] = round(batterypercent * 0.01, 0)
+            value, position = self.decode_16bit_uint(registerList, position)
+            data["batteryvoltage"] = round(value * 0.1, 1)
 
-            decoder.skip_bytes(2)  # res
+            value, position = self.decode_16bit_int(registerList, position)
+            data["batterycurrent"] = round(value * 0.01, 2)
 
-            pv1volt = decoder.decode_16bit_uint()
-            pv1curr = decoder.decode_16bit_uint()
-            pv1power = decoder.decode_16bit_uint()
-            data["pv1volt"] = round(pv1volt * 0.1, 1)
-            data["pv1curr"] = round(pv1curr * 0.01, 2)
+            position += 2  # skip 4 bytes
+
+            value, position = self.decode_16bit_int(registerList, position)
+            data["batterypower"] = round(value * 1, 0)
+            value, position = self.decode_16bit_int(registerList, position)
+            data["batterytemperature"] = round(value * 0.1, 0)
+            value, position = self.decode_16bit_uint(registerList, position)
+            data["batterypercent"] = round(value * 0.01, 0)
+
+            position += 1  # skip 2 bytes
+
+            value, position = self.decode_16bit_uint(registerList, position)
+            data["pv1volt"] = round(value * 0.1, 1)
+            value, position = self.decode_16bit_uint(registerList, position)
+            data["pv1curr"] = round(value * 0.01, 2)
+            pv1power, position = self.decode_16bit_uint(registerList, position)
             data["pv1power"] = round(pv1power * 1, 0)
 
-            pv2volt = decoder.decode_16bit_uint()
-            pv2curr = decoder.decode_16bit_uint()
-            pv2power = decoder.decode_16bit_uint()
-            data["pv2volt"] = round(pv2volt * 0.1, 1)
-            data["pv2curr"] = round(pv2curr * 0.01, 2)
+            value, position = self.decode_16bit_uint(registerList, position)
+            data["pv2volt"] = round(value * 0.1, 1)
+            value, position = self.decode_16bit_uint(registerList, position)
+            data["pv2curr"] = round(value * 0.01, 2)
+            pv2power, position = self.decode_16bit_uint(registerList, position)
             data["pv2power"] = round(pv2power * 1, 0)
 
-            data["totalpvpower"] = round(
-                pv1power * 1, 0) + round(pv2power * 1, 0)
+            data["totalpvpower"] = round(pv1power * 1, 0) + round(pv2power * 1, 0)
 
-            decoder.skip_bytes(12)  # pv3 & pv4
-            decoder.skip_bytes(32)  # unkown, always = 0
+            # pv3 & pv4
+            position += 6  # skip 12 bytes
+            # unkown, always = 0
+            position += 16  # skip 32 bytes
 
             # net side
-            decoder.skip_bytes(2)  # V Volt (R)
-            decoder.skip_bytes(2)  # A Current (R)
-            decoder.skip_bytes(2)  # Hz Frequenz (R)
-            decoder.skip_bytes(2)  # W Power L1 (R)
-            decoder.skip_bytes(2)  # A Current L2 (S)
-            decoder.skip_bytes(2)  # W Power L2 (S)
-            decoder.skip_bytes(2)  # A Current L3 (T)
-            decoder.skip_bytes(2)  # W Power L3 (T)
+            # skip 16 bytes
+            position += 1  # V Volt (R)
+            position += 1  # A Current (R)
+            position += 1  # Hz Frequenz (R)
+            position += 1  # W Power L1 (R)
+            position += 1  # A Current L2 (S)
+            position += 1  # W Power L2 (S)
+            position += 1  # A Current L3 (T)
+            position += 1  # W Power L3 (T)
 
-            pvflow = decoder.decode_16bit_uint()
-            data["pvflow"] = pvflow
-            if pvflow in PV_DIRECTION:
-                data["pvflowtext"] = PV_DIRECTION[pvflow]
+            value, position = self.decode_16bit_int(registerList, position)
+            data["pvflow"] = value
+            if value in PV_DIRECTION:
+                data["pvflowtext"] = PV_DIRECTION[value]
             else:
                 data["pvflowtext"] = "Unknown"
 
-            batteryflow = decoder.decode_16bit_int()
-            data["batteryflow"] = batteryflow
-            if batteryflow in BATTERY_DIRECTION:
-                data["batteryflowtext"] = BATTERY_DIRECTION[batteryflow]
+            value, position = self.decode_16bit_int(registerList, position)
+            data["batteryflow"] = value
+            if value in BATTERY_DIRECTION:
+                data["batteryflowtext"] = BATTERY_DIRECTION[value]
             else:
                 data["batteryflowtext"] = "Unknown"
 
-            gridflow = decoder.decode_16bit_int()
-            data["gridflow"] = gridflow
-            if gridflow in GRID_DIRECTION:
-                data["gridflowtext"] = GRID_DIRECTION[gridflow]
+            value, position = self.decode_16bit_int(registerList, position)
+            data["gridflow"] = value
+            if value in GRID_DIRECTION:
+                data["gridflowtext"] = GRID_DIRECTION[value]
             else:
                 data["gridflowtext"] = "Unknown"
 
-            decoder.skip_bytes(2)  # flow load
-
-            decoder.skip_bytes(14)  # res
+            # flow load
+            position += 1  # skip 2 bytes
+            # res
+            position += 7  # skip 14 bytes
 
             # Internal CT acquisition
-            decoder.skip_bytes(2)  # W The total system load consumes power
+            # W The total system load consumes power
+            position += 1  # skip 2 bytes
             # W CT real power of the grid
-            gridpower = decoder.decode_16bit_int()
-            data["gridpower"] = gridpower
-            decoder.skip_bytes(2)  # VA CT Apparent power of the grid
-            decoder.skip_bytes(2)  # W CT PV real power
-            decoder.skip_bytes(2)  # VA CT PV Apparent power
+            value, position = self.decode_16bit_int(registerList, position)
+            data["gridpower"] = value
+            position += 1  # VA CT Apparent power of the grid
+            position += 1  # W CT PV real power
+            position += 1  # VA CT PV Apparent power
 
             return data
 
@@ -329,41 +408,36 @@ class AmpereStorageProModbusHub(DataUpdateCoordinator[dict]):
 
     async def read_modbus_longterm_data(self) -> dict:
         try:
-            regs = await self.read_holding_registers(self._unit, 0x40BF, 88)
-            decoder = BinaryPayloadDecoder.fromRegisters(
-                regs, byteorder=Endian.BIG)
+            registerList = await self.read_holding_registers(self._unit, 0x40BF, 88)
+            position: int = 0
             data = {}
 
-            dailypvgeneration = decoder.decode_32bit_uint()
-            monthpvgeneration = decoder.decode_32bit_uint()
-            yearpvgeneration = decoder.decode_32bit_uint()
-            totalpvgeneration = decoder.decode_32bit_uint()
-            data["dailypvgeneration"] = round(dailypvgeneration * 0.01, 2)
-            data["monthpvgeneration"] = round(monthpvgeneration * 0.01, 2)
-            data["yearpvgeneration"] = round(yearpvgeneration * 0.01, 2)
-            data["totalpvgeneration"] = round(totalpvgeneration * 0.01, 2)
+            value, position = self.decode_32bit_uint(registerList, position)
+            data["dailypvgeneration"] = round(value * 0.01, 2)
+            value, position = self.decode_32bit_uint(registerList, position)
+            data["monthpvgeneration"] = round(value * 0.01, 2)
+            value, position = self.decode_32bit_uint(registerList, position)
+            data["yearpvgeneration"] = round(value * 0.01, 2)
+            value, position = self.decode_32bit_uint(registerList, position)
+            data["totalpvgeneration"] = round(value * 0.01, 2)
 
-            dailychargebattery = decoder.decode_32bit_uint()
-            monthchargebattery = decoder.decode_32bit_uint()
-            yearchargebattery = decoder.decode_32bit_uint()
-            totalchargebattery = decoder.decode_32bit_uint()
-            data["dailychargebattery"] = round(dailychargebattery * 0.01, 2)
-            data["monthchargebattery"] = round(monthchargebattery * 0.01, 2)
-            data["yearchargebattery"] = round(yearchargebattery * 0.01, 2)
-            data["totalchargebattery"] = round(totalchargebattery * 0.01, 2)
+            value, position = self.decode_32bit_uint(registerList, position)
+            data["dailychargebattery"] = round(value * 0.01, 2)
+            value, position = self.decode_32bit_uint(registerList, position)
+            data["monthchargebattery"] = round(value * 0.01, 2)
+            value, position = self.decode_32bit_uint(registerList, position)
+            data["yearchargebattery"] = round(value * 0.01, 2)
+            value, position = self.decode_32bit_uint(registerList, position)
+            data["totalchargebattery"] = round(value * 0.01, 2)
 
-            dailydischargebattery = decoder.decode_32bit_uint()
-            monthdischargebattery = decoder.decode_32bit_uint()
-            yeardischargebattery = decoder.decode_32bit_uint()
-            totaldischargebattery = decoder.decode_32bit_uint()
-            data["dailydischargebattery"] = round(
-                dailydischargebattery * 0.01, 2)
-            data["monthdischargebattery"] = round(
-                monthdischargebattery * 0.01, 2)
-            data["yeardischargebattery"] = round(
-                yeardischargebattery * 0.01, 2)
-            data["totaldischargebattery"] = round(
-                totaldischargebattery * 0.01, 2)
+            value, position = self.decode_32bit_uint(registerList, position)
+            data["dailydischargebattery"] = round(value * 0.01, 2)
+            value, position = self.decode_32bit_uint(registerList, position)
+            data["monthdischargebattery"] = round(value * 0.01, 2)
+            value, position = self.decode_32bit_uint(registerList, position)
+            data["yeardischargebattery"] = round(value * 0.01, 2)
+            value, position = self.decode_32bit_uint(registerList, position)
+            data["totaldischargebattery"] = round(value * 0.01, 2)
 
             return data
 
