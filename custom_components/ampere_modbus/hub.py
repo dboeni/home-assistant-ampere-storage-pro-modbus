@@ -128,7 +128,7 @@ class AmpereStorageProModbusHub(DataUpdateCoordinator[dict]):
             try:
                 async with self._read_lock:
                     response = await self._client.read_holding_registers(
-                        address=address, count=count, slave=unit
+                        address=address, count=count, device_id=unit
                     )
 
                 if (
