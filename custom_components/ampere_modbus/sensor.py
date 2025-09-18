@@ -422,4 +422,37 @@ SENSOR_TYPES: dict[str, list[AmpereModbusSensorEntityDescription]] = {
         entity_registry_enabled_default=True,
         entity_category=EntityCategory.DIAGNOSTIC,
     ),
+    "GridVoltage_L1E": AmpereModbusSensorEntityDescription(
+        name="Grid Voltage L1E",
+        key="gridvoltageL1E",
+        native_unit_of_measurement=UnitOfElectricPotential.VOLT,
+        device_class=SensorDeviceClass.VOLTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_registry_enabled_default=False,
+    ),
+    "GridVoltage_L2E": AmpereModbusSensorEntityDescription(
+        name="Grid Voltage L2E",
+        key="gridvoltageL2E",
+        native_unit_of_measurement=UnitOfElectricPotential.VOLT,
+        device_class=SensorDeviceClass.VOLTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_registry_enabled_default=False,
+    ),
+    "GridVoltage_L3E": AmpereModbusSensorEntityDescription(
+        name="Grid Voltage L3E",
+        key="gridvoltageL3E",
+        native_unit_of_measurement=UnitOfElectricPotential.VOLT,
+        device_class=SensorDeviceClass.VOLTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        entity_registry_enabled_default=False,
+    ),
+    "GridFrequency": AmpereModbusSensorEntityDescription(
+        name="Grid Frequency",
+        key="gridfrequency",
+        native_unit_of_measurement=UnitOfFrequency.HERTZ,
+        device_class=SensorDeviceClass.FREQUENCY,          
+        state_class=SensorStateClass.MEASUREMENT,          
+        suggested_display_precision=2,                      
+    ), 
 }
+
