@@ -3,7 +3,7 @@ import re
 
 import voluptuous as vol
 from homeassistant import config_entries
-from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT, CONF_SCAN_INTERVAL
+from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT, CONF_SCAN_INTERVAL, CONF_SCAN_INTERVAL_LONG
 from homeassistant.core import HomeAssistant, callback
 
 from .const import (
@@ -12,6 +12,7 @@ from .const import (
     DEFAULT_PORT,
     DEFAULT_UNIT,
     DEFAULT_SCAN_INTERVAL,
+    DEFAULT_SCAN_INTERVAL_LONG,
     DOMAIN,
 )
 
@@ -22,6 +23,7 @@ DATA_SCHEMA = vol.Schema(
         vol.Required(CONF_PORT, default=DEFAULT_PORT): int,
         vol.Optional(CONF_UNIT, default=DEFAULT_UNIT): int,
         vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): int,
+        vol.Optional(CONF_SCAN_INTERVAL_LONG, default=DEFAULT_SCAN_INTERVAL_LONG): int,
     }
 )
 

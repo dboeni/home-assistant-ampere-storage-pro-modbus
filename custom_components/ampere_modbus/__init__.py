@@ -6,7 +6,7 @@ import logging
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT, CONF_SCAN_INTERVAL
+from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT, CONF_SCAN_INTERVAL, CONF_SCAN_INTERVAL_LONG
 from homeassistant.core import HomeAssistant
 
 from .const import (
@@ -14,6 +14,7 @@ from .const import (
     DEFAULT_NAME,
     DEFAULT_UNIT,
     DEFAULT_SCAN_INTERVAL,
+    DEFAULT_SCAN_INTERVAL_LONG,
     DOMAIN,
 )
 from .hub import AmpereStorageProModbusHub
@@ -28,6 +29,9 @@ AMPERE_MODBUS_SCHEMA = vol.Schema(
         vol.Required(CONF_UNIT, default=DEFAULT_UNIT): cv.positive_int,
         vol.Optional(
             CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL
+        ): cv.positive_int,
+        vol.Optional(
+            CONF_SCAN_INTERVAL_LONG, default=DEFAULT_SCAN_INTERVAL_LONG
         ): cv.positive_int,
     }
 )
@@ -52,10 +56,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     port = entry.data[CONF_PORT]
     unit = entry.data[CONF_UNIT]
     scan_interval = entry.data[CONF_SCAN_INTERVAL]
+    scan_interval_long = entry.data[CONF_SCAN_INTERVAL_LONG]
 
     _LOGGER.debug("Setup %s.%s", DOMAIN, name)
 
-    hub = AmpereStorageProModbusHub(hass, name, host, port, unit, scan_interval)
+    hub = AmpereStorageProModbusHub(hass, name, host, port, unit, scan_interval, scan_interval_long)
     await hub.async_config_entry_first_refresh()
 
     """Register the hub."""

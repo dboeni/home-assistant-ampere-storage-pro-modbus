@@ -33,12 +33,14 @@ class AmpereStorageProModbusHub(DataUpdateCoordinator[dict]):
         port: Number,
         unit: Number,
         scan_interval: Number,
+        scan_interval_long: Number,
     ):
         super().__init__(
             hass,
             _LOGGER,
             name=name,
             update_interval=timedelta(seconds=scan_interval),
+            update_interval_long=timedelta(seconds=scan_interval_long),
             update_method=self._async_update_data,
         )
         self._host = host
@@ -49,6 +51,7 @@ class AmpereStorageProModbusHub(DataUpdateCoordinator[dict]):
         self._read_lock = asyncio.Lock()
         self._connection_lock = asyncio.Lock()
         self._lock = threading.Lock()
+        self._last_long_data_read_time = 0
 
         self._inverter_data: dict = {}
         self.data: dict = {}
@@ -171,7 +174,11 @@ class AmpereStorageProModbusHub(DataUpdateCoordinator[dict]):
 
         all_read_data.update(await self.read_modbus_device_data())
         all_read_data.update(await self.read_modbus_realtime_data())
-        all_read_data.update(await self.read_modbus_longterm_data())
+        now = datetime.datetime.now()
+        if datetime.timedelta(self._last_long_data_read_time, now) > self.update_interval_long:
+            self._last_long_data_read_time = now
+            all_read_data.update(await self.read_modbus_longterm_data())
+            all_read_data.update(await self.read_modbus_grid_summary_data())
 
         await self.close()
         return all_read_data
@@ -311,7 +318,7 @@ class AmpereStorageProModbusHub(DataUpdateCoordinator[dict]):
 
     async def read_modbus_realtime_data(self) -> dict:
         try:
-            registerList = await self.read_holding_registers(self._unit, 0x4069, 60)
+            registerList = await self.read_holding_registers(self._unit, 0x4069, 39)
             position: int = 0
             data = {}
 
@@ -346,7 +353,7 @@ class AmpereStorageProModbusHub(DataUpdateCoordinator[dict]):
             pv2power, position = self.decode_16bit_uint(registerList, position)
             data["pv2power"] = round(pv2power * 1, 0)
 
-            data["totalpvpower"] = round(pv1power * 1, 0) + round(pv2power * 1, 0)
+            #data["totalpvpower"] = round(pv1power * 1, 0) + round(pv2power * 1, 0)
 
             # pv3 & pv4
             position += 6  # skip 12 bytes
@@ -387,18 +394,31 @@ class AmpereStorageProModbusHub(DataUpdateCoordinator[dict]):
 
             # flow load
             position += 1  # skip 2 bytes
-            # res
-            position += 7  # skip 14 bytes
+
+            value, position = self.decode_16bit_int(registerList, position)
+            data["totalsyspower"] = value
 
             # Internal CT acquisition
-            # W The total system load consumes power
-            position += 1  # skip 2 bytes
-            # W CT real power of the grid
+            #  CT_GridPowerWatt
             value, position = self.decode_16bit_int(registerList, position)
             data["gridpower"] = value
-            position += 1  # VA CT Apparent power of the grid
-            position += 1  # W CT PV real power
-            position += 1  # VA CT PV Apparent power
+            position += 3  # skip 3 bytes
+
+            value, position = self.decode_16bit_int(registerList, position)
+            data["totalpvpower"] = value
+            
+            # end after 39 cells, increase count if needed
+            
+            #TotalBatteryPower
+            #TotalGridPowerWatt
+            #TotalGridPowerVA
+            #TotalInvPowerWatt
+            #TotalInvPowerVA
+            #BackupTotalLoadPowerWatt
+            #BackupTotalLoadPowerVA
+            #SysGridPowerWall
+            #value, position = self.decode_16bit_int(registerList, position)
+            #data["gridpower"] = value
 
             return data
 
@@ -408,7 +428,7 @@ class AmpereStorageProModbusHub(DataUpdateCoordinator[dict]):
 
     async def read_modbus_longterm_data(self) -> dict:
         try:
-            registerList = await self.read_holding_registers(self._unit, 0x40BF, 88)
+            registerList = await self.read_holding_registers(self._unit, 0x40BF, 24)
             position: int = 0
             data = {}
 
@@ -438,6 +458,36 @@ class AmpereStorageProModbusHub(DataUpdateCoordinator[dict]):
             data["yeardischargebattery"] = round(value * 0.01, 2)
             value, position = self.decode_32bit_uint(registerList, position)
             data["totaldischargebattery"] = round(value * 0.01, 2)
+
+            return data
+
+        except Exception as e:
+            _LOGGER.error(f"Error reading inverter data: {e}")
+            return {}
+
+    async def read_modbus_grid_summary_data(self) -> dict:
+        try:
+            registerList = await self.read_holding_registers(self._unit, 0x4167, 16)
+            position: int = 0
+            data = {}
+
+            value, position = self.decode_32bit_uint(registerList, position)
+            data["todaygridbought"] = round(value * 0.01, 2)
+            value, position = self.decode_32bit_uint(registerList, position)
+            data["monthgridbought"] = round(value * 0.01, 2)
+            value, position = self.decode_32bit_uint(registerList, position)
+            data["yeargridbought"] = round(value * 0.01, 2)
+            value, position = self.decode_32bit_uint(registerList, position)
+            data["totalgridbought"] = round(value * 0.01, 2)
+            value, position = self.decode_32bit_uint(registerList, position)
+
+            data["todaygridsold"] = round(value * 0.01, 2)
+            value, position = self.decode_32bit_uint(registerList, position)
+            data["monthgridsold"] = round(value * 0.01, 2)
+            value, position = self.decode_32bit_uint(registerList, position)
+            data["yeargridsold"] = round(value * 0.01, 2)
+            value, position = self.decode_32bit_uint(registerList, position)
+            data["totalgridsold"] = round(value * 0.01, 2)
 
             return data
 
