@@ -9,7 +9,7 @@
           "port": "Modbus TCP Port",
           "unit": "Unit",
           "scan_interval": "Abfrage der Sensoren in Sekunden",
-          "scan_interval_long": "Abfrage der longterm Sensoren in Sekunden (multiple of scan_interval)"
+          "scan_interval_long": "Abfrage der longterm Sensoren in Sekunden (vielfache von scan_interval)"
         }
       }
     },

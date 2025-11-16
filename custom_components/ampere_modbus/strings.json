@@ -8,7 +8,8 @@
           "name": "name",
           "port": "modbus TCP port",
           "unit": "Unit",
-          "scan_interval": "Query the sensors in seconds"
+          "scan_interval": "Query the sensors in seconds",
+          "scan_interval_long": "Query the longterm data in seconds (multiple of scan_interval)"
         }
       }
     },

@@ -2,7 +2,8 @@
   "domain": "ampere_modbus",
   "name": "Ampere.StoragePro",
   "codeowners": [
-    "@dboeni"
+    "@dboeni",
+    "@Chris-42"
   ],
   "config_flow": true,
   "dependencies": [],
