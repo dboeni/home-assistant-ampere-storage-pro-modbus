@@ -7,9 +7,9 @@ from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorStateClass,
     SensorEntityDescription,
-    EntityCategory,
 )
 from homeassistant.const import (
+    EntityCategory,
     UnitOfElectricCurrent,
     UnitOfElectricPotential,
     UnitOfEnergy,
@@ -457,4 +457,3 @@ SENSOR_TYPES: dict[str, list[AmpereModbusSensorEntityDescription]] = {
     ),
 
 }
-
