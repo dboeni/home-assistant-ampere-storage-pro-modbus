@@ -38,11 +38,17 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(hass, entry, async_add_entities):
     hub_name = entry.data[CONF_NAME]
     hub = hass.data[DOMAIN][hub_name]["hub"]
+    inverter_data = hub.data
 
     device_info = {
         "identifiers": {(DOMAIN, hub_name)},
         "name": hub_name,
         "manufacturer": ATTR_MANUFACTURER,
+        "model": "Ampere.StoragePro",
+        "serial_number": inverter_data.get("serialnumber"),
+        "sw_version": (
+            str(inverter_data["dv"]) if inverter_data.get("dv") is not None else None
+        ),
     }
 
     entities = []
