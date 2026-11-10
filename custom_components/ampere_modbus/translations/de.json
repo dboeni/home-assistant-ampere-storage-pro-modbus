@@ -18,5 +18,19 @@
     "abort": {
       "already_configured": "Gerät ist bereits konfiguriert"
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "AmpereStorage.Pro Einstellungen",
+        "description": "Verbindung und Abfrageintervall ändern.",
+        "data": {
+          "host": "IP Adresse",
+          "port": "Modbus TCP Port",
+          "unit": "Unit",
+          "scan_interval": "Abfrage der Sensoren in Sekunden"
+        }
+      }
+    }
   }
 }

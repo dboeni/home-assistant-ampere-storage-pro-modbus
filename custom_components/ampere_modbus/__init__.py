@@ -47,11 +47,12 @@ async def async_setup(hass, config):
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Set up a Ampere Storage Pro mobus."""
-    host = entry.data[CONF_HOST]
+    config = {**entry.data, **entry.options}
+    host = config[CONF_HOST]
     name = entry.data[CONF_NAME]
-    port = entry.data[CONF_PORT]
-    unit = entry.data[CONF_UNIT]
-    scan_interval = entry.data[CONF_SCAN_INTERVAL]
+    port = config[CONF_PORT]
+    unit = config.get(CONF_UNIT, DEFAULT_UNIT)
+    scan_interval = config.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
 
     _LOGGER.debug("Setup %s.%s", DOMAIN, name)
 
@@ -62,8 +63,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     hass.data[DOMAIN][name] = {"hub": hub}
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    entry.async_on_unload(entry.add_update_listener(async_reload_entry))
 
     return True
+
+
+async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry):
+    """Reload the integration when its options change."""
+    await hass.config_entries.async_reload(entry.entry_id)
 
 
 async def async_unload_entry(hass, entry):

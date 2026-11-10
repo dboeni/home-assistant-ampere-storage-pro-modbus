@@ -28,8 +28,11 @@ DATA_SCHEMA = vol.Schema(
 
 def host_valid(host):
     """Return True if hostname or IP address is valid."""
+    if not host:
+        return False
+
     try:
-        if ipaddress.ip_address(host).version == (4 or 6):
+        if ipaddress.ip_address(host).version in (4, 6):
             return True
     except ValueError:
         disallowed = re.compile(r"[^a-zA-Z\d\-]")
@@ -58,4 +61,43 @@ class AmpereModbusConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="user", data_schema=DATA_SCHEMA, errors=errors
+        )
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry):
+        """Create the options flow."""
+        return AmpereModbusOptionsFlow()
+
+
+class AmpereModbusOptionsFlow(config_entries.OptionsFlow):
+    """Handle options for an existing Ampere Storage Pro entry."""
+
+    async def async_step_init(self, user_input=None):
+        """Manage the integration options."""
+        errors = {}
+        if user_input is not None:
+            if not host_valid(user_input[CONF_HOST]):
+                errors[CONF_HOST] = "invalid host IP"
+            else:
+                return self.async_create_entry(title="", data=user_input)
+
+        current = {**self.config_entry.data, **self.config_entry.options}
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_HOST, default=current[CONF_HOST]): str,
+                vol.Required(
+                    CONF_PORT, default=current.get(CONF_PORT, DEFAULT_PORT)
+                ): int,
+                vol.Required(
+                    CONF_UNIT, default=current.get(CONF_UNIT, DEFAULT_UNIT)
+                ): int,
+                vol.Required(
+                    CONF_SCAN_INTERVAL,
+                    default=current.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL),
+                ): int,
+            }
+        )
+        return self.async_show_form(
+            step_id="init", data_schema=schema, errors=errors
         )

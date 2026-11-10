@@ -6,13 +6,13 @@ Home Assistant custom component for reading data locally from Ampere.StoragePro 
 ## Features
 
 - Setup via the UI
+- Connection settings can be changed later via the integration's options
 - Configurable slave id and polling interval
 - Registers are read in blocks (reduction of queries)
 
 ## Features in future
 
 - Installation directly from the hacs store
-- Make settings changeable
 - Batterie steuerbar (Last vom Netz)
 
 # Installation

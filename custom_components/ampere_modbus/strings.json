@@ -18,5 +18,19 @@
     "abort": {
       "already_configured": "Device is already configured"
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "AmpereStorage.Pro settings",
+        "description": "Update the connection and polling settings.",
+        "data": {
+          "host": "ip address",
+          "port": "modbus TCP port",
+          "unit": "Unit",
+          "scan_interval": "Query the sensors in seconds"
+        }
+      }
+    }
   }
 }
